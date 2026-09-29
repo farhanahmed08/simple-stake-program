@@ -1,0 +1,178 @@
+import random
+import mysql.connector as c
+
+con = c.connect(username="root", passwd="123456", port="3306", database="stake")
+cur = con.cursor()
+
+moneywon = 0
+moneylost = 0
+moneywithdrawn = 0
+t = 5
+play_var = 'y'
+st = 1
+money = 0
+
+
+def create_account():
+    user = input("Enter username to create account: ")
+    pwd = input("Enter password for your account: ")
+    s = "insert into game(user,pass) values(%s,%s)"
+    cur.execute(s, (user, pwd))
+    con.commit()
+
+
+def play():
+    global moneywithdrawn, moneywon, moneylost, t, money, st
+
+    while True:
+        user = input("Enter username: ")
+        pwd = input("Enter password: ")
+        s = "select user,pass from game"
+        cur.execute(s)
+        r = cur.fetchall()
+        pwdcount = 0
+        usercount = 0
+
+        for i in r:
+            if i[0] == user:
+                usercount = 1
+                if i[1] == pwd:
+                    pwdcount = 1
+                break
+
+        if usercount == 0:
+            print("Username does not exist")
+            relogin = int(input("press 0 to create account or 1 to login again: "))
+            if relogin == 0:
+                create_account()
+                continue
+            elif relogin == 1:
+                continue
+            else:
+                return
+
+        elif pwdcount == 0:
+            print("Incorrect password")
+            relogin = int(input("press 0 to create account or 1 to login again: "))
+            if relogin == 0:
+                create_account()
+                continue
+            elif relogin == 1:
+                continue
+            else:
+                return
+
+        else:
+            print("Game has started")
+            break
+
+    t -= 1
+    print("Used 1 token(s) for playing")
+    ll = [1, 2, 3, 4]
+    n = input("Enter name: ")
+    lv = int(input("Enter level(1/2/3/4): "))
+    while lv not in ll:
+        lv = int(input("Enter level(1/2/3/4): "))
+    nb = lv
+    gs = 25
+    lg = []
+    lb = []
+
+    while True:
+        b = random.randint(1, gs)
+        if b not in lb:
+            lb.append(b)
+            if len(lb) == nb:
+                break
+
+    if st == 0:
+        s = int(input(f"""would you like to enter the previously won money, if yes by how much?
+        You currently have {money}: """))
+        if s > money:
+            print("Get out!!!!!")
+            return
+        money -= s
+        m = s + int(input("Enter the amount of money: "))
+    else:
+        m = int(input("Enter the amount of money you would like to get started with: "))
+
+    if m >= 10000:
+        st = input("You are about to risk a lot of money. Are you sure you want to proceed(y/n): ")
+    else:
+        st = input("press y to start: ")
+
+    e = 1
+    while st != 'n':
+        g = int(input("Enter a number from 1-25: "))
+        if g in lg:
+            print("You have already entered this number:")
+            continue
+        lg.append(g)
+        if g not in lb and g <= gs:
+            c = m
+            m = int(m * e)
+            e += 1 / (lv + 1)
+            print("Current earnings:", m)
+            if e == 26 - nb * 0.5:
+                print("BIG MONEY!! VICTORY, you gained a token")
+                t += 1
+                break
+            moneywon += m - c
+            st = input("Do you want to make another guess(y/n): ")
+        elif g > gs:
+            continue
+        else:
+            moneylost -= m
+            print("You lost all your money oversmart brokie", lb)
+            m = 0
+            break
+
+    print("total money is", m)
+    money += m
+    s = "update game set Moneywon=%s, Moneylost=%s, Tokens=%s, Moneyused=%s where User=%s"
+    cur.execute(s, (moneywon, moneylost, t, money, user))
+    con.commit()
+
+    play_choice = input("Do you want to risk your money again?(y/n): ")
+    if play_choice != "n":
+        x = int(input("enter amount of money you want to withdraw: "))
+        money -= x
+        s = "update game set Moneyused=%s, Tokens=%s where User=%s"
+        cur.execute(s, (money, t, user))
+        con.commit()
+        st = 0
+        moneywithdrawn += x
+
+
+def balance():
+    user = input("Enter username: ")
+    pwd = input("Enter password: ")
+    s = "select * from game where User=%s and Pass=%s"
+    cur.execute(s, (user, pwd))
+    bal = cur.fetchall()
+    print(bal)
+
+
+ch = "1"
+while ch != "4":
+    print("Welcome, here are the rules to the game:")
+    print("1)In every yes or no option any input other than n would be considered as yes")
+    print("""2)You are granted 5 tokens at first. With each play, it decreases by 1
+      i.e when you will put n in do you want to play again""")
+    print("""3)In the game  there are 4 levels. In each level you have 25 choices(level 1 has 1 bomb,
+      level 2 has 2 bombs, level 3 has 3 bombs and level 4 has 4 bombs""")
+    print("""4)You have to enter a number if the number is the bomb ur money entered will get deleted
+      if it is not, your money will be multiplied(exceptfor the first time""")
+    print("5)In case all correct numbers have been entered, you get an extra token!")
+    print("1. Create Account\n 2. Play\n3. Balance")
+    ch = input("Enter your choice: ")
+    if ch == "1":
+        create_account()
+    elif ch == "2":
+        play()
+    elif ch == "3":
+        balance()
+    elif ch == "4":
+        print("Thanks")
+    else:
+        print("Enter a valid choice")
