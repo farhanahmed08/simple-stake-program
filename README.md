@@ -13,7 +13,7 @@ An interactive, command-line betting and logic game built with **Python** and in
 ---
 
 ## 🛠️ Tech Stack
-- **Language:** Python 3.x
+- **Language:** Python 3.13
 - **Database:** MySQL
 - **Connector:** `mysql-connector-python`
 
